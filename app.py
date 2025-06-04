@@ -331,11 +331,20 @@ def manage_assignments():
                 with col1:
                     st.write(f"**📅 Due:** {assignment.due_date.strftime('%Y-%m-%d')}")
                     st.write(f"**⏱️ Hours:** {assignment.estimated_hours}")
-                    days_left = (assignment.due_date - datetime.now()).days
-                    if days_left < 0:
-                        st.write(f"**⚠️ Status:** {abs(days_left)} days overdue")
+                    # Fix the date calculation
+                    now = datetime.now()
+                    days_left = (assignment.due_date - now).days
+                    
+                    # More accurate calculation including time of day
+                    if assignment.due_date < now:
+                        days_overdue = abs(days_left)
+                        st.write(f"**⚠️ Status:** {days_overdue} days overdue")
+                    elif days_left == 0:
+                        st.write(f"**🎯 Status:** Due today!")
+                    elif days_left == 1:
+                        st.write(f"**📅 Status:** Due tomorrow")
                     else:
-                        st.write(f"**📆 Status:** {days_left} days left")
+                        st.write(f"**📅 Status:** {days_left} days left")
                 
                 with col2:
                     st.write(f"**⭐ Priority:** {'⭐' * assignment.priority}")
