@@ -64,6 +64,47 @@ class StudyOptimizer:
         except Exception as e:
             return assignment.priority * 10
 
+def create_ics_file(schedule_data):
+    """Create ICS calendar file for download"""
+    
+    ics_content = """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Study Scheduler//Study Schedule//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+"""
+    
+    for item in schedule_data:
+        # Parse the date
+        try:
+            date_str = item['Date']  # "Monday, June 03"
+            current_year = datetime.now().year
+            
+            # Convert to datetime (simplified - you might want to improve this)
+            event_date = datetime.now().date()  # For now, use current date
+            start_time = datetime.combine(event_date, datetime.strptime("09:00", "%H:%M").time())
+            end_time = start_time + timedelta(hours=item['Hours'])
+            
+            # Format for ICS
+            start_str = start_time.strftime("%Y%m%dT%H%M%S")
+            end_str = end_time.strftime("%Y%m%dT%H%M%S")
+            
+            ics_content += f"""BEGIN:VEVENT
+UID:{hash(item['Assignment'] + item['Course'])}{start_str}@studyscheduler
+DTSTART:{start_str}
+DTEND:{end_str}
+SUMMARY:📚 {item['Assignment']} - {item['Course']}
+DESCRIPTION:Study session for {item['Assignment']}\\nCourse: {item['Course']}\\nPriority: {item['Priority']}/5\\nEstimated: {item['Hours']} hours
+CATEGORIES:STUDY,EDUCATION
+STATUS:CONFIRMED
+END:VEVENT
+"""
+        except Exception as e:
+            continue  # Skip problematic entries
+    
+    ics_content += "END:VCALENDAR"
+    return ics_content
+
 # Page configuration
 st.set_page_config(
     page_title="Smart Study Scheduler",
@@ -370,8 +411,38 @@ def generate_schedule():
                         title="📊 Daily Study Schedule")
             fig.update_layout(xaxis_tickangle=-45)
             st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning("No assignments to schedule!")
+
+            # Export options
+            st.subheader("📤 Export Schedule")
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                # ICS Calendar file
+                ics_file = create_ics_file(schedule_data)
+                st.download_button(
+                    label="📅 Download Calendar (.ics)",
+                    data=ics_file,
+                    file_name="study_schedule.ics",
+                    mime="text/calendar",
+                    help="Import this file into Google Calendar, Apple Calendar, or Outlook"
+                )
+            
+            with col2:
+                # CSV export
+                csv = df.to_csv(index=False)
+                st.download_button(
+                    label="📊 Download CSV",
+                    data=csv,
+                    file_name="study_schedule.csv",
+                    mime="text/csv"
+                )
+            
+            with col3:
+                if st.button("📧 Email Schedule"):
+                    st.info("📧 Email feature coming soon! For now, download the calendar file and share it.")
+                else:
+                    st.warning("No assignments to schedule!")
 
 if __name__ == "__main__":
     main()
